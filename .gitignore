@@ -28,3 +28,7 @@ docs/deployment-view.drawio
 
 # cdxgen output
 bom.json
+
+# Environment files (contain account-specific endpoints, never commit)
+.env.*
+!.env.example

@@ -10,26 +10,32 @@ so the same scripts work for dev and prod without edits.
 
 ### 1. Environment variables
 
-All scripts use the variables defined in **Section 0** of
-[`docs/deployment-strategy-prompt.md`](../docs/deployment-strategy-prompt.md).
-Set them in your shell before running any script:
+All scripts read AWS credentials and config from **environment variables**.
+The repo ships two env files at the root:
+
+| File | Purpose | Committed? |
+|------|---------|-----------|
+| `.env.example` | Blank template — copy to create your own | ✅ Yes |
+| `.env.dev` | Dev environment with all values filled in | ❌ No (gitignored) |
+| `.env.prod` | Prod environment (create when needed) | ❌ No (gitignored) |
+
+**At the start of every session, source the right file:**
 
 ```bash
-# ── DEV ────────────────────────────────────────────────────
-PROFILE=tixy-dev
-REGION=eu-west-1
-STACK_NAME=ye-poland-waiting-room-dev
-INLET_STACK_NAME=ye-poland-inlet-dev
-EVENT_ID=ye-poland-2026-04
-INCREMENT_BY=500
-PUBLIC_API_URL=https://d3j12ztg52wyqw.cloudfront.net
-PRIVATE_API_URL=https://40d1xzzke4.execute-api.eu-west-1.amazonaws.com/api
-STATIC_SITE_BUCKET=ye-poland-dev-site
-STATIC_SITE_CF_ID=E2NWJFT6PM8O1F
+source .env.dev    # dev
+source .env.prod   # prod
 ```
 
-> **Tip:** Copy the Section 0 block to a local `env-dev.sh` / `env-prod.sh`
-> file (never committed) and `source` it at the start of each session.
+You'll see a confirmation line:
+```
+✓ dev env loaded — profile=tixy-dev  event=ye-poland-2026-04  stack=ye-poland-waiting-room-dev
+```
+
+**To create a prod env file:**
+```bash
+cp .env.example .env.prod
+# then fill in PROFILE=tixy-prod, STACK_NAME, endpoints, etc.
+```
 
 ### 2. AWS CLI profiles
 
