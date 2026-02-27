@@ -8,12 +8,12 @@ It sets the MAX_QUEUE_POSITION_EXPIRED value and optionally increments the servi
 
 import boto3
 import os
-import redis
 import json
 from botocore import config
 from time import time
 from boto3.dynamodb.conditions import Key
 from counters import MAX_QUEUE_POSITION_EXPIRED, QUEUE_COUNTER, RESET_IN_PROGRESS, SERVING_COUNTER, EXPIRED_QUEUE_COUNTER
+from vwr.common.redis_client import get_redis_client
 
 SECRET_NAME_PREFIX = os.environ["STACK_NAME"]
 SOLUTION_ID = os.environ['SOLUTION_ID']
@@ -34,9 +34,7 @@ ddb_resource = boto3.resource('dynamodb', endpoint_url=f'https://dynamodb.{regio
 ddb_table_queue_position_entry_time = ddb_resource.Table(QUEUE_POSITION_ENTRYTIME_TABLE)
 ddb_table_serving_counter_issued_at = ddb_resource.Table(SERVING_COUNTER_ISSUEDAT_TABLE)
 secrets_client = boto3.client('secretsmanager', config=user_config, endpoint_url=f'https://secretsmanager.{region}.amazonaws.com')
-response = secrets_client.get_secret_value(SecretId=f"{SECRET_NAME_PREFIX}/redis-auth")
-redis_auth = response.get("SecretString")
-rc = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, ssl=True, decode_responses=True, password=redis_auth)
+rc = get_redis_client(secrets_client, SECRET_NAME_PREFIX)
 events_client = boto3.client('events', endpoint_url=f'https://events.{region}.amazonaws.com', config=user_config)
 
 def lambda_handler(event, _):

@@ -8,7 +8,6 @@ Session status is denoted by an integer. Sessions set to a status of 1 indicates
 Authorization is required to invoke this API.
 """
 
-import redis
 import json
 import boto3
 import os
@@ -18,6 +17,7 @@ from boto3.dynamodb.conditions import Attr
 from counters import COMPLETED_SESSION_COUNTER, ABANDONED_SESSION_COUNTER
 from vwr.common.sanitize import deep_clean
 from vwr.common.validate import is_valid_rid
+from vwr.common.redis_client import get_redis_client
 
 # connection info and other globals
 REDIS_HOST = os.environ["REDIS_HOST"]
@@ -37,9 +37,7 @@ ddb_table = ddb_resource.Table(DDB_TOKEN_TABLE_NAME)
 events_client = boto3.client('events', endpoint_url=f"https://events.{region}.amazonaws.com", config=user_config)
 status_codes = {1: "completed", -1: "abandoned"}
 secrets_client = boto3.client('secretsmanager', config=user_config, endpoint_url=f"https://secretsmanager.{region}.amazonaws.com")
-response = secrets_client.get_secret_value(SecretId=f"{SECRET_NAME_PREFIX}/redis-auth")
-redis_auth = response.get("SecretString")
-rc = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, ssl=True, decode_responses=True, password=redis_auth)
+rc = get_redis_client(secrets_client, SECRET_NAME_PREFIX)
 
 def lambda_handler(event, _):
     """

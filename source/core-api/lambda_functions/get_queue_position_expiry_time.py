@@ -9,7 +9,6 @@ It retrieves the expiry time for a queue number
 # pylint: disable=R0911
 
 from http import HTTPStatus
-import redis
 import json
 import os
 import boto3
@@ -18,6 +17,7 @@ from botocore import config
 from boto3.dynamodb.conditions import Key
 from vwr.common.sanitize import deep_clean
 from vwr.common.validate import is_valid_rid
+from vwr.common.redis_client import get_redis_client
 from counters import MAX_QUEUE_POSITION_EXPIRED, SERVING_COUNTER
 
 REDIS_HOST = os.environ["REDIS_HOST"]
@@ -35,9 +35,7 @@ region = boto_session.region_name
 user_agent_extra = {"user_agent_extra": SOLUTION_ID}
 user_config = config.Config(**user_agent_extra)
 secrets_client = boto3.client('secretsmanager', config=user_config, endpoint_url=f"https://secretsmanager.{region}.amazonaws.com")
-response = secrets_client.get_secret_value(SecretId=f"{SECRET_NAME_PREFIX}/redis-auth")
-redis_auth = response.get("SecretString")
-rc = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, ssl=True, decode_responses=True, password=redis_auth)
+rc = get_redis_client(secrets_client, SECRET_NAME_PREFIX)
 ddb_resource = boto3.resource('dynamodb', endpoint_url=f'https://dynamodb.{region}.amazonaws.com', config=user_config)
 ddb_table_queue_position_entry_time = ddb_resource.Table(QUEUE_POSITION_ENTRYTIME_TABLE)
 ddb_table_serving_counter_issued_at = ddb_resource.Table(SERVING_COUNTER_ISSUEDAT_TABLE)

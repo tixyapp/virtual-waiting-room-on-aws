@@ -6,13 +6,13 @@ This module is the get_serving_num API handler.
 It retrieves the number currently being served by the waiting room.
 """
 
-import redis
 import json
 import os
 import boto3
 from botocore import config
 from counters import SERVING_COUNTER
 from vwr.common.sanitize import deep_clean
+from vwr.common.redis_client import get_redis_client
 
 # connection info and other globals
 REDIS_HOST = os.environ["REDIS_HOST"]
@@ -27,9 +27,7 @@ user_agent_extra = {"user_agent_extra": SOLUTION_ID}
 user_config = config.Config(**user_agent_extra)
 secrets_client = boto3.client('secretsmanager', config=user_config, endpoint_url=f"https://secretsmanager.{region}.amazonaws.com")
 
-response = secrets_client.get_secret_value(SecretId=f"{SECRET_NAME_PREFIX}/redis-auth")
-redis_auth = response.get("SecretString")
-rc = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, ssl=True, decode_responses=True, password=redis_auth)
+rc = get_redis_client(secrets_client, SECRET_NAME_PREFIX)
 
 def lambda_handler(event, _):
     """

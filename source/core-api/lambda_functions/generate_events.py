@@ -7,12 +7,12 @@ It writes various waiting room metrics to the waiting room's event bus.
 User can subscribe to the event bus to process the published data and act upon it, if desired. 
 """
 
-import redis
 import json
 import boto3
 import os
 from botocore import config
 from counters import QUEUE_COUNTER, SERVING_COUNTER, TOKEN_COUNTER, ABANDONED_SESSION_COUNTER, COMPLETED_SESSION_COUNTER
+from vwr.common.redis_client import get_redis_client
 
 # connection info and other globals
 REDIS_HOST = os.environ["REDIS_HOST"]
@@ -30,9 +30,7 @@ region = boto_session.region_name
 events_client = boto3.client('events', endpoint_url=f"https://events.{region}.amazonaws.com", config=user_config)
 lambda_client = boto3.client('lambda', endpoint_url=f"https://lambda.{region}.amazonaws.com", config=user_config)
 secrets_client = boto3.client('secretsmanager', endpoint_url=f"https://secretsmanager.{region}.amazonaws.com", config=user_config)
-response = secrets_client.get_secret_value(SecretId=f"{SECRET_NAME_PREFIX}/redis-auth")
-redis_auth = response.get("SecretString")
-rc = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, ssl=True, decode_responses=True, password=redis_auth)
+rc = get_redis_client(secrets_client, SECRET_NAME_PREFIX)
 
 # put events for number of valid tokens, current queue_counter value, current serving_num value, 
 # total items(tokens) in db, and items(tokens) marked session_completed

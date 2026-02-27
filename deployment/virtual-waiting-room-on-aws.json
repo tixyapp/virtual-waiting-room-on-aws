@@ -838,15 +838,15 @@
                     {
                         "Description": "Ingress rule for first subnet.",
                         "IpProtocol": "tcp",
-                        "FromPort": {"Ref": "RedisPort"},
-                        "ToPort": {"Ref": "RedisPort"},
+                        "FromPort": 6379,
+                        "ToPort": 6379,
                         "CidrIp": "10.0.16.0/20"
                     },
                     {
                         "Description": "Ingress rule for second subnet.",
                         "IpProtocol": "tcp",
-                        "FromPort": {"Ref": "RedisPort"},
-                        "ToPort": {"Ref": "RedisPort"},
+                        "FromPort": 6379,
+                        "ToPort": 6379,
                         "CidrIp": "10.0.32.0/20"
                     }
                 ],
@@ -879,37 +879,59 @@
                 }
             }
         },
-        "SubnetGroup": {
-            "Type": "AWS::ElastiCache::SubnetGroup",
+        "RedisAppUser": {
+            "Type": "AWS::ElastiCache::User",
+            "DependsOn": "RedisAuth",
             "Properties": {
-                "Description": "Cache Subnet Group",
-                "SubnetIds": [
-                    {
-                        "Ref": "Subnet1"
-                    },
-                    {
-                        "Ref": "Subnet2"
-                    }
+                "Engine": "redis",
+                "UserId": {
+                    "Fn::Sub": [
+                        "${ShortName}-app",
+                        {"ShortName": {"Fn::GetAtt": ["InvokeShortenStackNameLambda", "returnValue"]}}
+                    ]
+                },
+                "UserName": "waitingroom",
+                "AccessString": "on ~* &* +@all",
+                "AuthenticationMode": {
+                    "Type": "password",
+                    "Passwords": [
+                        {"Fn::Sub": "{{resolve:secretsmanager:${AWS::StackName}/redis-auth:SecretString:password}}"}
+                    ]
+                }
+            }
+        },
+        "RedisUserGroup": {
+            "Type": "AWS::ElastiCache::UserGroup",
+            "DependsOn": "RedisAppUser",
+            "Properties": {
+                "Engine": "redis",
+                "UserGroupId": {
+                    "Fn::Sub": [
+                        "${ShortName}-redis-ug",
+                        {"ShortName": {"Fn::GetAtt": ["InvokeShortenStackNameLambda", "returnValue"]}}
+                    ]
+                },
+                "UserIds": [
+                    "default",
+                    {"Ref": "RedisAppUser"}
                 ]
             }
         },
-        "RedisReplicationGroup": {
-            "Type": "AWS::ElastiCache::ReplicationGroup",
-            "DependsOn": "RedisAuth",
+        "RedisServerlessCache": {
+            "Type": "AWS::ElastiCache::ServerlessCache",
+            "DependsOn": "RedisUserGroup",
             "Properties": {
-                "AtRestEncryptionEnabled": true,
-                "AuthToken": {"Fn::Sub": "{{resolve:secretsmanager:${AWS::StackName}/redis-auth:SecretString}}"},
-                "AutomaticFailoverEnabled": true,
-                "CacheNodeType": "cache.r6g.large",
-                "CacheSubnetGroupName": {
-                    "Ref": "SubnetGroup"
+                "ServerlessCacheName": {
+                    "Fn::Sub": [
+                        "${ShortName}-cache",
+                        {"ShortName": {"Fn::GetAtt": ["InvokeShortenStackNameLambda", "returnValue"]}}
+                    ]
                 },
-                "Engine": "redis",
-                "MultiAZEnabled": true,
-                "NumNodeGroups": 1,
-                "Port": {"Ref": "RedisPort"},
-                "ReplicasPerNodeGroup": 1,
-                "ReplicationGroupDescription": "Redis Replication Group",
+                "Engine": "valkey",
+                "SubnetIds": [
+                    {"Ref": "Subnet1"},
+                    {"Ref": "Subnet2"}
+                ],
                 "SecurityGroupIds": [
                     {
                         "Fn::GetAtt": [
@@ -918,7 +940,7 @@
                         ]
                     }
                 ],
-                "TransitEncryptionEnabled": true
+                "UserGroupId": {"Ref": "RedisUserGroup"}
             }
         },
         "RedisLayer": {
@@ -1055,14 +1077,14 @@
                     "Variables": {
                         "REDIS_HOST": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Address"
+                                "RedisServerlessCache",
+                                "Endpoint.Address"
                             ]
                         },
                         "REDIS_PORT": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Port"
+                                "RedisServerlessCache",
+                                "Endpoint.Port"
                             ]
                         },
                         "QUEUE_URL": {
@@ -1173,14 +1195,14 @@
                     "Variables": {
                         "REDIS_HOST": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Address"
+                                "RedisServerlessCache",
+                                "Endpoint.Address"
                             ]
                         },
                         "REDIS_PORT": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Port"
+                                "RedisServerlessCache",
+                                "Endpoint.Port"
                             ]
                         },
                         "TOKEN_TABLE": {
@@ -1549,14 +1571,14 @@
                     "Variables": {
                         "REDIS_HOST": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Address"
+                                "RedisServerlessCache",
+                                "Endpoint.Address"
                             ]
                         },
                         "REDIS_PORT": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Port"
+                                "RedisServerlessCache",
+                                "Endpoint.Port"
                             ]
                         },
                         "EVENT_ID": {
@@ -1685,14 +1707,14 @@
                     "Variables": {
                         "REDIS_HOST": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Address"
+                                "RedisServerlessCache",
+                                "Endpoint.Address"
                             ]
                         },
                         "REDIS_PORT": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Port"
+                                "RedisServerlessCache",
+                                "Endpoint.Port"
                             ]
                         },
                         "EVENT_ID": {
@@ -1822,14 +1844,14 @@
                     "Variables": {
                         "REDIS_HOST": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Address"
+                                "RedisServerlessCache",
+                                "Endpoint.Address"
                             ]
                         },
                         "REDIS_PORT": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Port"
+                                "RedisServerlessCache",
+                                "Endpoint.Port"
                             ]
                         },
                         "TOKEN_TABLE": {
@@ -1952,14 +1974,14 @@
                     "Variables": {
                         "REDIS_HOST": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Address"
+                                "RedisServerlessCache",
+                                "Endpoint.Address"
                             ]
                         },
                         "REDIS_PORT": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Port"
+                                "RedisServerlessCache",
+                                "Endpoint.Port"
                             ]
                         },
                         "QUEUE_POSITION_ENTRYTIME_TABLE": {
@@ -2082,14 +2104,14 @@
                     "Variables": {
                         "REDIS_HOST": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Address"
+                                "RedisServerlessCache",
+                                "Endpoint.Address"
                             ]
                         },
                         "REDIS_PORT": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Port"
+                                "RedisServerlessCache",
+                                "Endpoint.Port"
                             ]
                         },
                         "TOKEN_TABLE": {
@@ -2244,14 +2266,14 @@
                     "Variables": {
                         "REDIS_HOST": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Address"
+                                "RedisServerlessCache",
+                                "Endpoint.Address"
                             ]
                         },
                         "REDIS_PORT": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Port"
+                                "RedisServerlessCache",
+                                "Endpoint.Port"
                             ]
                         },
                         "EVENT_ID": {
@@ -2383,14 +2405,14 @@
                     "Variables": {
                         "REDIS_HOST": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Address"
+                                "RedisServerlessCache",
+                                "Endpoint.Address"
                             ]
                         },
                         "REDIS_PORT": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Port"
+                                "RedisServerlessCache",
+                                "Endpoint.Port"
                             ]
                         },
                         "EVENT_ID": {
@@ -2638,14 +2660,14 @@
                     "Variables": {
                         "REDIS_HOST": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Address"
+                                "RedisServerlessCache",
+                                "Endpoint.Address"
                             ]
                         },
                         "REDIS_PORT": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Port"
+                                "RedisServerlessCache",
+                                "Endpoint.Port"
                             ]
                         },
                         "EVENT_ID": {
@@ -2789,14 +2811,14 @@
                         },
                         "REDIS_HOST": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Address"
+                                "RedisServerlessCache",
+                                "Endpoint.Address"
                             ]
                         },
                         "REDIS_PORT": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Port"
+                                "RedisServerlessCache",
+                                "Endpoint.Port"
                             ]
                         },
                         "SOLUTION_ID": {
@@ -2934,14 +2956,14 @@
                         },
                         "REDIS_HOST": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Address"
+                                "RedisServerlessCache",
+                                "Endpoint.Address"
                             ]
                         },
                         "REDIS_PORT": {
                             "Fn::GetAtt": [
-                                "RedisReplicationGroup",
-                                "PrimaryEndPoint.Port"
+                                "RedisServerlessCache",
+                                "Endpoint.Port"
                             ]
                         },
                         "SOLUTION_ID": {
@@ -4358,8 +4380,7 @@
                         },
                         "STACK_NAME": {
                             "Ref": "AWS::StackName"
-                        },
-                        "REPLICATION_GROUP": {"Ref": "RedisReplicationGroup"}
+                        }
                     }
                 },
                 "Handler": "update_distribution.handler",
@@ -4394,11 +4415,11 @@
         },
         "UpdateDistributionCustomResource": {
             "Type": "AWS::CloudFormation::CustomResource",
-            "DependsOn": [
+                "DependsOn": [
                 "PublicApiCloudFront",
                 "ApiKey",
                 "GenerateKeysCustomResource",
-                "RedisReplicationGroup"
+                "RedisServerlessCache"
             ],
             "Properties": {
                 "ServiceToken": {
@@ -4426,15 +4447,6 @@
                                     "Effect": "Allow",
                                     "Resource": {
                                         "Fn::Sub": "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}/redis-auth*"
-                                    }
-                                },
-                                {
-                                    "Action": [
-                                        "elasticache:ModifyReplicationGroup"
-                                    ],
-                                    "Effect": "Allow",
-                                    "Resource": {
-                                        "Fn::Sub": "arn:aws:elasticache:${AWS::Region}:${AWS::AccountId}:replicationgroup:${RedisReplicationGroup}"
                                     }
                                 },
                                 {
@@ -4594,7 +4606,7 @@
             "Type": "AWS::Lambda::Function",
             "DependsOn": [
                 "TokenTable",
-                "RedisReplicationGroup",
+                "RedisServerlessCache",
                 "QueuePositionEntryTimeTable",
                 "ServingCounterIssuedAtTable"
             ],
@@ -5244,10 +5256,12 @@
         "RedisAuth": {
             "Type" : "AWS::SecretsManager::Secret",
             "Properties" : {
-                "Description" : "Auth for Redis",
+                "Description" : "Auth for Redis (RBAC / ACL)",
                 "GenerateSecretString" : {
-                    "PasswordLength": 128,
-                    "ExcludeCharacters": "\"%'()*+,./:;=?@[\\]_`{|}~",
+                    "SecretStringTemplate": "{\"username\": \"waitingroom\"}",
+                    "GenerateStringKey": "password",
+                    "PasswordLength": 64,
+                    "ExcludeCharacters": "\"@/\\'",
                     "IncludeSpace": false
                 },
                 "KmsKeyId" : "alias/aws/secretsmanager",
@@ -6104,12 +6118,6 @@
                 "false"
             ],
             "Default": "false"
-        },
-        "RedisPort": {
-            "Description": "Port to use when connecting to Redis",
-            "Type": "Number",
-            "ConstraintDescription": "Please enter a value for this field.",
-            "Default": "1785"
         },
         "QueuePositionExpiryPeriod": {
             "Description": "Time interval beyond which a queue position is ineligible to generate a token (seconds)",

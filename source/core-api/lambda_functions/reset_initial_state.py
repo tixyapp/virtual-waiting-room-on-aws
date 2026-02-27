@@ -5,13 +5,13 @@
 This module is the used to reset the counters and DynamoDB table used by the core API.
 """
 
-import redis
 import json
 import os
 import boto3
 from botocore import config
 from counters import QUEUE_COUNTER, SERVING_COUNTER, TOKEN_COUNTER, EXPIRED_QUEUE_COUNTER, ABANDONED_SESSION_COUNTER, COMPLETED_SESSION_COUNTER, MAX_QUEUE_POSITION_EXPIRED, RESET_IN_PROGRESS
 from vwr.common.sanitize import deep_clean
+from vwr.common.redis_client import get_redis_client
 from datetime import datetime
 
 TOKEN_TABLE = os.environ["TOKEN_TABLE"]
@@ -30,9 +30,7 @@ boto_session = boto3.session.Session()
 region = boto_session.region_name
 ddb_client = boto3.client('dynamodb', endpoint_url=f"https://dynamodb.{region}.amazonaws.com", config=user_config)
 secrets_client = boto3.client('secretsmanager', config=user_config, endpoint_url=f"https://secretsmanager.{region}.amazonaws.com")
-response = secrets_client.get_secret_value(SecretId=f"{SECRET_NAME_PREFIX}/redis-auth")
-redis_auth = response.get("SecretString")
-rc = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, ssl=True, decode_responses=True, password=redis_auth)
+rc = get_redis_client(secrets_client, SECRET_NAME_PREFIX)
 cloudfront_client = boto3.client('cloudfront', config=user_config)
 
 
