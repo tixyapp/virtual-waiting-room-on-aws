@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Waiting Room</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #f4f5f7;
+      --card:     #ffffff;
+      --primary:  #2563eb;
+      --primary-h:#1d4ed8;
+      --success:  #16a34a;
+      --warn:     #d97706;
+      --danger:   #dc2626;
+      --muted:    #6b7280;
+      --border:   #e5e7eb;
+      --text:     #111827;
+      --radius:   12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      color: var(--text);
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .card-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .card-header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -.5px;
+    }
+    .card-header p {
+      color: var(--muted);
+      margin-top: 6px;
+      font-size: .9rem;
+    }
+
+    /* status badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: .82rem;
+      font-weight: 600;
+      margin-bottom: 28px;
+    }
+    .status-badge.entering  { background: #eff6ff; color: var(--primary); }
+    .status-badge.waiting   { background: #fefce8; color: var(--warn); }
+    .status-badge.ready     { background: #f0fdf4; color: var(--success); }
+    .status-badge.error     { background: #fef2f2; color: var(--danger); }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    .ready .dot, .error .dot { animation: none; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .3; }
+    }
+
+    /* progress bar */
+    .progress-wrap {
+      margin-bottom: 28px;
+    }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: .8rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .progress-bar-bg {
+      background: var(--border);
+      border-radius: 999px;
+      height: 10px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--primary);
+      transition: width .6s ease;
+    }
+
+    /* stats grid */
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .stat {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .stat-label {
+      font-size: .75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 4px;
+    }
+    .stat-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+    .stat-value.loading {
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 400;
+    }
+
+    /* button */
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-h); }
+    .btn-primary:disabled {
+      background: var(--border);
+      color: var(--muted);
+      cursor: not-allowed;
+    }
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+    }
+    .btn-success:hover { background: #15803d; }
+
+    .error-msg {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 14px;
+      color: var(--danger);
+      font-size: .88rem;
+      margin-top: 16px;
+      display: none;
+    }
+
+    footer {
+      margin-top: 24px;
+      font-size: .75rem;
+      color: var(--muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── CONFIGURE THESE AFTER DEPLOYING THE STACK ─────────────────────── -->
+<script>
+  const CONFIG = {
+    PUBLIC_API_URL:  'https://d3j12ztg52wyqw.cloudfront.net',
+    EVENT_ID:        'ye-poland-2026-04',
+    BUY_TICKET_URL:  'https://des8t03j9cqvz.cloudfront.net/buy-ticket/index.html',
+    POLL_INTERVAL_MS: 3000,
+    MAX_SAMPLES:      50,   // for time estimation
+  };
+</script>
+<!-- ─────────────────────────────────────────────────────────────────────── -->
+
+<div class="card">
+  <div class="card-header">
+    <h1>Virtual Waiting Room</h1>
+    <p>Please wait — you will be redirected automatically when it's your turn.</p>
+  </div>
+
+  <div style="text-align:center">
+    <span class="status-badge entering" id="statusBadge">
+      <span class="dot"></span>
+      <span id="statusText">Entering queue…</span>
+    </span>
+  </div>
+
+  <div class="progress-wrap" id="progressWrap" style="display:none">
+    <div class="progress-label">
+      <span>Progress</span>
+      <span id="progressPct">0%</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">Your number</div>
+      <div class="stat-value loading" id="myPosition">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Now serving</div>
+      <div class="stat-value loading" id="servingPosition">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Ahead of you</div>
+      <div class="stat-value loading" id="aheadCount">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Est. wait</div>
+      <div class="stat-value loading" id="estWait">—</div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="proceedBtn" disabled>
+    Waiting for your turn…
+  </button>
+
+  <div class="error-msg" id="errorMsg"></div>
+</div>
+
+<footer>Powered by Virtual Waiting Room on AWS</footer>
+
+<script>
+  // ─── State ───────────────────────────────────────────────────────────────
+  const state = {
+    requestId:       null,
+    myPosition:      null,
+    servingPosition: 0,
+    samples:         [],   // [servingPosition, timestamp] pairs for regression
+    token:           null,
+    pollTimer:       null,
+    done:            false,
+  };
+
+  // ─── DOM refs ─────────────────────────────────────────────────────────────
+  const $ = id => document.getElementById(id);
+  const statusBadge    = $('statusBadge');
+  const statusText     = $('statusText');
+  const progressWrap   = $('progressWrap');
+  const progressFill   = $('progressFill');
+  const progressPct    = $('progressPct');
+  const myPositionEl   = $('myPosition');
+  const servingEl      = $('servingPosition');
+  const aheadEl        = $('aheadCount');
+  const estWaitEl      = $('estWait');
+  const proceedBtn     = $('proceedBtn');
+  const errorMsg       = $('errorMsg');
+
+  // ─── Status helpers ───────────────────────────────────────────────────────
+  function setStatus(type, text) {
+    statusBadge.className = `status-badge ${type}`;
+    statusText.textContent = text;
+  }
+
+  function showError(msg) {
+    setStatus('error', 'Error');
+    errorMsg.style.display = 'block';
+    errorMsg.textContent   = msg;
+  }
+
+  // ─── API helpers ──────────────────────────────────────────────────────────
+  async function apiFetch(method, path, body) {
+    const opts = {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(`${CONFIG.PUBLIC_API_URL}${path}`, opts);
+    return res;
+  }
+
+  // ─── Step 1: Enter the queue ──────────────────────────────────────────────
+  async function assignQueueNum() {
+    setStatus('entering', 'Entering queue…');
+    try {
+      const res = await apiFetch('POST', '/assign_queue_num', { event_id: CONFIG.EVENT_ID });
+      if (!res.ok) throw new Error(`assign_queue_num returned ${res.status}`);
+      const data = await res.json();
+      state.requestId = data.api_request_id;
+      await getQueuePosition();
+    } catch (err) {
+      console.error(err);
+      showError('Could not enter the queue. Please refresh to try again.');
+    }
+  }
+
+  // ─── Step 2: Get assigned queue position ─────────────────────────────────
+  // The API may return 202 while the SQS message is still being processed —
+  // retry with exponential back-off until a 200 arrives.
+  async function getQueuePosition(attempt = 1) {
+    try {
+      const res = await apiFetch(
+        'GET',
+        `/queue_num?event_id=${CONFIG.EVENT_ID}&request_id=${state.requestId}`
+      );
+      if (res.status === 202) {
+        // still processing — retry
+        const delay = Math.min(500 * attempt, 8000);
+        setTimeout(() => getQueuePosition(attempt + 1), delay);
+        return;
+      }
+      if (!res.ok) throw new Error(`queue_num returned ${res.status}`);
+      const data = await res.json();
+      state.myPosition = parseInt(data.queue_number, 10);
+      myPositionEl.textContent = `#${state.myPosition.toLocaleString()}`;
+      myPositionEl.classList.remove('loading');
+      progressWrap.style.display = 'block';
+      setStatus('waiting', 'Waiting in queue');
+      startPolling();
+    } catch (err) {
+      console.error(err);
+      showError('Could not retrieve your queue position. Please refresh.');
+    }
+  }
+
+  // ─── Step 3: Poll serving counter + waiting room size ────────────────────
+  function startPolling() {
+    if (state.pollTimer) return;
+    pollOnce();   // immediate first call
+    state.pollTimer = setInterval(pollOnce, CONFIG.POLL_INTERVAL_MS);
+  }
+
+  async function pollOnce() {
+    await Promise.all([updateServingPosition(), updateWaitingRoomSize()]);
+    updateTimeEstimate();
+    updateUI();
+    if (!state.done && state.servingPosition >= state.myPosition) {
+      advanceToToken();
+    }
+  }
+
+  async function updateServingPosition() {
+    try {
+      const res = await apiFetch('GET', `/serving_num?event_id=${CONFIG.EVENT_ID}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      state.servingPosition = parseInt(data.serving_counter, 10);
+    } catch (_) { /* silent — stale value persists */ }
+  }
+
+  async function updateWaitingRoomSize() {
+    try {
+      const res = await apiFetch('GET', `/waiting_num?event_id=${CONFIG.EVENT_ID}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const n = parseInt(data.waiting_num, 10);
+      const aheadCount = Math.max(0, state.myPosition - state.servingPosition - 1);
+      aheadEl.textContent = aheadCount.toLocaleString();
+      aheadEl.classList.remove('loading');
+      void n; // waiting_num available here if needed
+    } catch (_) {}
+  }
+
+  // ─── Time estimation via linear regression ────────────────────────────────
+  // Keeps up to MAX_SAMPLES of [servingPosition, timestamp] pairs and fits a
+  // line to predict when the serving counter will reach myPosition.
+  function updateTimeEstimate() {
+    const now = Date.now();
+    state.samples.push([state.servingPosition, now]);
+    if (state.samples.length > CONFIG.MAX_SAMPLES) state.samples.shift();
+    if (state.samples.length < 3) return;   // not enough data yet
+
+    const predict = linearRegression(state.samples);
+    if (!predict) return;
+
+    const estimatedAt = predict(state.myPosition);
+    if (isNaN(estimatedAt) || estimatedAt <= now) {
+      estWaitEl.textContent = 'Soon';
+      estWaitEl.classList.remove('loading');
+      return;
+    }
+    const diffMs = estimatedAt - now;
+    estWaitEl.textContent  = humanDuration(diffMs);
+    estWaitEl.classList.remove('loading');
+  }
+
+  // Fits y = mx + b through [x, y] samples; returns f(x) = mx + b
+  function linearRegression(samples) {
+    const n = samples.length;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    for (const [x, y] of samples) {
+      sumX  += x;
+      sumY  += y;
+      sumXY += x * y;
+      sumX2 += x * x;
+    }
+    const denom = n * sumX2 - sumX * sumX;
+    if (denom === 0) return null;
+    const slope     = (n * sumXY - sumX * sumY) / denom;
+    const intercept = (sumY - slope * sumX) / n;
+    return x => slope * x + intercept;
+  }
+
+  function humanDuration(ms) {
+    const s = Math.round(ms / 1000);
+    if (s < 60)  return `~${s}s`;
+    const m = Math.round(s / 60);
+    if (m < 60)  return `~${m} min`;
+    const h = Math.floor(m / 60);
+    const rm = m % 60;
+    return `~${h}h ${rm}m`;
+  }
+
+  // ─── Update UI ────────────────────────────────────────────────────────────
+  function updateUI() {
+    servingEl.textContent = `#${state.servingPosition.toLocaleString()}`;
+    servingEl.classList.remove('loading');
+
+    const pct = state.myPosition > 0
+      ? Math.min(100, Math.round((state.servingPosition / state.myPosition) * 100))
+      : 0;
+    progressFill.style.width = `${pct}%`;
+    progressPct.textContent  = `${pct}%`;
+  }
+
+  // ─── Step 4: Generate token and redirect ──────────────────────────────────
+  async function advanceToToken() {
+    if (state.done) return;
+    state.done = true;
+    clearInterval(state.pollTimer);
+
+    setStatus('ready', 'Your turn — fetching token…');
+    proceedBtn.disabled    = true;
+    proceedBtn.textContent = 'Fetching your token…';
+
+    try {
+      const res = await apiFetch('POST', '/generate_token', {
+        event_id:   CONFIG.EVENT_ID,
+        request_id: state.requestId,
+      });
+      if (!res.ok) throw new Error(`generate_token returned ${res.status}`);
+      const data = await res.json();
+      state.token = data.access_token;
+
+      // persist token for the buy-ticket page
+      sessionStorage.setItem('wvroom_token', state.token);
+      // set cookie on parent domain so prod subdomain can also read it
+      document.cookie = `wvroom_token=${state.token}; path=/; SameSite=Lax`;
+
+      setStatus('ready', "It's your turn!");
+      proceedBtn.disabled    = false;
+      proceedBtn.textContent = 'Proceed to checkout →';
+      proceedBtn.className   = 'btn btn-success';
+      proceedBtn.onclick     = redirect;
+
+      // auto-redirect after 3 s
+      setTimeout(redirect, 3000);
+    } catch (err) {
+      console.error(err);
+      state.done = false;
+      showError('Could not fetch your access token. Retrying…');
+      setTimeout(() => { state.done = false; advanceToToken(); }, 4000);
+    }
+  }
+
+  function redirect() {
+    const url = `${CONFIG.BUY_TICKET_URL}?wvroom_token=${encodeURIComponent(state.token)}`;
+    window.location.href = url;
+  }
+
+  // ─── Session resume ───────────────────────────────────────────────────────
+  // If the user refreshes, try to resume from sessionStorage so they don't
+  // lose their place. Their requestId is still valid in DynamoDB.
+  function tryResume() {
+    const saved = sessionStorage.getItem('wvroom_state');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.requestId && parsed.myPosition && parsed.eventId === CONFIG.EVENT_ID) {
+          state.requestId  = parsed.requestId;
+          state.myPosition = parsed.myPosition;
+          myPositionEl.textContent = `#${state.myPosition.toLocaleString()}`;
+          myPositionEl.classList.remove('loading');
+          progressWrap.style.display = 'block';
+          setStatus('waiting', 'Resuming your place…');
+          startPolling();
+          return true;
+        }
+      } catch (_) {}
+    }
+    return false;
+  }
+
+  function persistState() {
+    sessionStorage.setItem('wvroom_state', JSON.stringify({
+      requestId:  state.requestId,
+      myPosition: state.myPosition,
+      eventId:    CONFIG.EVENT_ID,
+    }));
+  }
+
+  // ─── Boot ─────────────────────────────────────────────────────────────────
+  (function init() {
+    if (!tryResume()) {
+      assignQueueNum();
+    }
+
+    // persist state once we have requestId + position
+    const persister = setInterval(() => {
+      if (state.requestId && state.myPosition) {
+        persistState();
+        clearInterval(persister);
+      }
+    }, 500);
+
+    proceedBtn.onclick = () => {
+      if (state.token) redirect();
+    };
+  })();
+</script>
+
+</body>
+</html>
