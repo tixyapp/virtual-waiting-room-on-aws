@@ -16,6 +16,12 @@
 #   source docs/env-dev.sh        (or set manually from Section 0)
 #   ./scripts/upload-static-pages.sh
 
+# PROFILE=tixy-dev \
+# REGION=eu-west-1 \
+# STATIC_SITE_BUCKET=ye-poland-dev-site \
+# STATIC_SITE_CF_ID=E2NWJFT6PM8O1F \
+# ./scripts/upload-static-pages.sh queue
+
 set -euo pipefail
 
 # ── Repo root (script can be called from any directory) ───────────────────────
