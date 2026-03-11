@@ -72,19 +72,22 @@ CURRENT_ENV=$(aws lambda get-function-configuration \
   --profile "$PROFILE" --region "$REGION" \
   --query "Environment.Variables" --output json)
 
-NEW_ENV=$(EVENT_ID="$EVENT_ID" INCREMENT_BY="$INCREMENT_BY" PRIVATE_API_URL="$PRIVATE_API_URL" \
+ENV_FILE=$(mktemp)
+trap 'rm -f "$ENV_FILE"' EXIT
+
+EVENT_ID="$EVENT_ID" INCREMENT_BY="$INCREMENT_BY" PRIVATE_API_URL="$PRIVATE_API_URL" \
   python3 -c "
 import sys, json, os
 e = json.load(sys.stdin)
 e['EVENT_ID']          = os.environ['EVENT_ID']
 e['INCREMENT_BY']      = os.environ['INCREMENT_BY']
 e['CORE_API_ENDPOINT'] = os.environ['PRIVATE_API_URL']
-print('Variables=' + json.dumps(e).replace(' ',''))
-" <<< "$CURRENT_ENV")
+print(json.dumps({'Variables': e}))
+" <<< "$CURRENT_ENV" > "$ENV_FILE"
 
 aws lambda update-function-configuration \
   --function-name "$INLET_FN" \
-  --environment "$NEW_ENV" \
+  --environment "file://$ENV_FILE" \
   --profile "$PROFILE" --region "$REGION" \
   --output text > /dev/null
 ok "Inlet rate: $INCREMENT_BY users/min"
@@ -124,3 +127,42 @@ echo " READY. Sale can open now."
 echo " Monitor with: ./scripts/queue-status.sh"
 echo " Close with:   ./scripts/close-queue.sh"
 hr
+
+# ── Lambda reserved concurrency ───────────────────────────────────────────────
+echo "Setting Lambda reserved concurrency..."
+
+declare -A CONCURRENCY=(
+  ["tixy-wvroom-prod-AssignQueueNum-adW7hefFSvzv"]=1000
+  ["tixy-wvroom-prod-RecordHeartbeat-akRUSHwhAvn8"]=500
+  ["tixy-wvroom-prod-GetServingNum-yP9XZfGPZHBL"]=300
+  ["tixy-wvroom-prod-GenerateToken-LQh4Wg1x7q0s"]=200
+  ["tixy-wvroom-prod-GetQueueNum-AmKTINyyDczg"]=200
+  ["tixy-wvroom-prod-GetWaitingNum-Wm2oIpoj0pnd"]=200
+)
+
+for FN in "${!CONCURRENCY[@]}"; do
+  LIMIT=${CONCURRENCY[$FN]}
+  aws lambda put-function-concurrency \
+    --function-name "$FN" \
+    --reserved-concurrent-executions "$LIMIT" \
+    --profile $PROFILE --region $REGION > /dev/null
+  echo "  ✓ $FN → $LIMIT"
+done
+
+# ── Provisioned concurrency on VPC Lambdas (pre-warms ENIs) ──────────────────
+echo "Setting provisioned concurrency on VPC Lambdas..."
+
+for FN in \
+  tixy-wvroom-prod-AssignQueueNum-adW7hefFSvzv \
+  tixy-wvroom-prod-RecordHeartbeat-akRUSHwhAvn8; do
+  VERSION=$(aws lambda publish-version \
+    --function-name "$FN" \
+    --profile $PROFILE --region $REGION \
+    --query Version --output text)
+  aws lambda put-provisioned-concurrency-config \
+    --function-name "$FN" \
+    --qualifier "$VERSION" \
+    --provisioned-concurrent-executions 50 \
+    --profile $PROFILE --region $REGION > /dev/null
+  echo "  ✓ $FN version $VERSION → 50 provisioned"
+done

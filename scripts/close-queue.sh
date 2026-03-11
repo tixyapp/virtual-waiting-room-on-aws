@@ -49,6 +49,25 @@ SERVING=$(curl -sf "${PUBLIC_API_URL}/serving_num?event_id=${EVENT_ID}" \
 WAITING=$(curl -sf "${PUBLIC_API_URL}/waiting_num?event_id=${EVENT_ID}" \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['waiting_num'])")
 
+# ── Remove provisioned concurrency (stop paying for idle warm containers) ─────
+echo "Removing provisioned concurrency..."
+
+for FN in \
+  tixy-wvroom-prod-AssignQueueNum-adW7hefFSvzv \
+  tixy-wvroom-prod-RecordHeartbeat-akRUSHwhAvn8; do
+  VERSION=$(aws lambda list-versions-by-function \
+    --function-name "$FN" \
+    --profile $PROFILE --region $REGION \
+    --query "Versions[-1].Version" --output text)
+  aws lambda delete-provisioned-concurrency-config \
+    --function-name "$FN" \
+    --qualifier "$VERSION" \
+    --profile $PROFILE --region $REGION > /dev/null
+  echo "  ✓ Provisioned concurrency removed from $FN"
+done
+
+
+
 echo ""
 echo "  Final serving counter : #${SERVING}"
 echo "  Remaining in queue    : ${WAITING} (will not be served)"
@@ -60,3 +79,4 @@ if [ "$WAITING" -gt 0 ]; then
   echo "       They will see their wait time freeze and eventually time out."
 fi
 echo "──────────────────────────────────────────────"
+

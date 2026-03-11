@@ -341,10 +341,13 @@ _The CloudFormation template (_`deployment/virtual-waiting-room-on-aws.json`_) c
 > (_`/Users/wojtekkinastowski/Projects/tixy/wvroom/virtual-waiting-room-on-aws/.venv/`_)
 > with all project dependencies pre-installed.  
 > Activate it before running any Python tooling or unit tests:_
+>
 > ```bash
 > source .venv/bin/activate
 > ```
+>
 > _If you need to recreate it from scratch, follow the_ `README.md` _instructions:_
+>
 > ```bash
 > cd deployment/
 > poetry install
@@ -377,6 +380,7 @@ $CFN deploy \
 > **\*Note:** Since the ElastiCache Serverless and RBAC changes are already in the template (_`deployment/virtual-waiting-room-on-aws.json`_), the built output will include those changes automatically.\*
 
 > **\*Inlet stack — deploy separately:** The `PeriodicInlet` Lambda and EventBridge rule live in a **second CloudFormation stack** (`$INLET_STACK_NAME`) based on `virtual-waiting-room-on-aws-sample-inlet-strategy.template`. Deploy it after the main stack:\*
+>
 > ```bash
 > $CFN deploy \
 >   --stack-name $INLET_STACK_NAME \
@@ -394,6 +398,7 @@ $CFN deploy \
 >     MaxSize=100 \
 >   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 > ```
+>
 > _The rule deploys as **ENABLED** — it will start firing immediately. Disable it between sales with Script 6._
 
 ### _CORS_
@@ -501,8 +506,32 @@ BUY_TICKET_URL:                 <Amplify URL>/buy-ticket
 - **\*CloudFront Function key rotation:** If* `reset_initial_state` *is called, new RSA keys are generated. The public key embedded in the CloudFront Function (Phase 2) must be updated manually after any key rotation.\*
 - `**queue_num` _returns 202:\*\* The SQS-based queue assignment is async._ `GET /queue_num` _returns 202 until the SQS message is processed. The queue page retries with exponential back-off — this is expected behaviour._
 - **\*Valkey engine:** The CloudFormation template was updated to use* `valkey` *engine on ElastiCache Serverless. The Python* `redis-py` *client works unchanged — Valkey is wire-compatible.\*
-- **\*Secrets Manager dynamic reference — double-colon fix (already applied):** The* `RedisAppUser` *resource originally referenced the Redis password as* `SecretString::password` *(two colons), which CloudFormation parsed as an empty JSON key + a version-stage named* `password`*. This caused* `CREATE_FAILED` *on first deploy. Fixed to* `SecretString:password` *(single colon) in* `deployment/virtual-waiting-room-on-aws.json`*.*
-- **\*deploy.sh profile & version:** `deploy.sh` *has no* `--profile` *flag — pass* `AWS_PROFILE=$PROFILE` *as an env prefix. Always pass* `-v $VERSION` *to match the version baked into the template by* `build-s3-dist.sh`*; omitting it uploads to the wrong S3 key and causes* `S3 key does not exist` *errors at deploy time.\*
+- **\*Secrets Manager dynamic reference — double-colon fix (already applied):** The* `RedisAppUser` *resource originally referenced the Redis password as* `SecretString::password` *(two colons), which CloudFormation parsed as an empty JSON key + a version-stage named* `password`*. This caused* `CREATE_FAILED` *on first deploy. Fixed to* `SecretString:password` *(single colon) in* `deployment/virtual-waiting-room-on-aws.json`*.\*
+- **\*deploy.sh profile & version:** `deploy.sh` _has no_ `--profile` _flag — pass_ `AWS_PROFILE=$PROFILE` _as an env prefix. Always pass_ `-v $VERSION` _to match the version baked into the template by_ `build-s3-dist.sh`_; omitting it uploads to the wrong S3 key and causes_ `S3 key does not exist` \*errors at deploy time.\*
+- **CloudFront caching for polling endpoints**
+  `serving_num` and `waiting_num` return a **single global counter** identical for all users
+  on the same `event_id`. By default the Public API CloudFront distribution uses
+  `CachingDisabled`, so every poll (every 3 s × 300k users) hits Lambda + API Gateway —
+  ~$165 per sale day wasted.
+
+**Fix (one-time, done Feb 2026):** Created a `WaitingRoomPolling` CloudFront cache
+policy (TTL = 3 s, cache key = `event_id` query string) and added two cache behaviors
+ahead of the default `*` behavior:
+
+| Path pattern    | Cache policy       | Effect                      |
+| --------------- | ------------------ | --------------------------- |
+| `/serving_num*` | WaitingRoomPolling | 99.9% cache hit during sale |
+| `/waiting_num*` | WaitingRoomPolling | 99.9% cache hit during sale |
+
+**For future stacks:** this is a manual post-deploy step because the CloudFormation
+template's CloudFront distribution uses `CachingDisabled` by default. After deploying
+a new stack, run `scripts/cf-caching-fix.sh` (or add the behaviors via Console) before
+going live.
+
+**Verify after deploy:**
+curl -sI "https://<PUBLIC_API_URL>/serving_num?event_id=<EVENT_ID>" | grep x-cache
+
+# Expected: x-cache: Hit from cloudfront (on 2nd+ request)
 
 ---
 

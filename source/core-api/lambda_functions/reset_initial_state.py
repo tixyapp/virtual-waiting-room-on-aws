@@ -12,6 +12,7 @@ from botocore import config
 from counters import QUEUE_COUNTER, SERVING_COUNTER, TOKEN_COUNTER, EXPIRED_QUEUE_COUNTER, ABANDONED_SESSION_COUNTER, COMPLETED_SESSION_COUNTER, MAX_QUEUE_POSITION_EXPIRED, RESET_IN_PROGRESS
 from vwr.common.sanitize import deep_clean
 from vwr.common.redis_client import get_redis_client
+from vwr.common.heartbeat import clear_all_heartbeats
 from datetime import datetime
 
 TOKEN_TABLE = os.environ["TOKEN_TABLE"]
@@ -59,6 +60,7 @@ def lambda_handler(event, _):
         rc.getset(COMPLETED_SESSION_COUNTER, 0)
         rc.getset(ABANDONED_SESSION_COUNTER, 0)
         rc.getset(MAX_QUEUE_POSITION_EXPIRED, 0)
+        clear_all_heartbeats(rc)
         print("Counters reset")
 
         try:                       

@@ -857,6 +857,116 @@
           "type": "mock"
         }
       }
+    },
+    "/heartbeat": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "HeartbeatModel",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/HeartbeatModel"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200 response",
+            "schema": {
+              "$ref": "#/definitions/Empty"
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "x-amazon-apigateway-request-validator": "Validate body",
+        "x-amazon-apigateway-integration": {
+          "httpMethod": "POST",
+          "uri": {
+            "Fn::Sub": [
+              "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations",
+              {
+                "LambdaArn": {
+                  "Fn::GetAtt": [
+                    "RecordHeartbeat",
+                    "Arn"
+                  ]
+                }
+              }
+            ]
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "contentHandling": "CONVERT_TO_TEXT",
+          "type": "aws_proxy"
+        }
+      },
+      "options": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "200 response",
+            "schema": {
+              "$ref": "#/definitions/Empty"
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "type": "string"
+              },
+              "Access-Control-Allow-Methods": {
+                "type": "string"
+              },
+              "Access-Control-Allow-Headers": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            }
+          },
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "passthroughBehavior": "when_no_match",
+          "type": "mock"
+        }
+      }
     }
   },
   "securityDefinitions": {
@@ -884,30 +994,49 @@
     "TokenModel": {
       "type": "object",
       "required": [
-          "event_id",
-          "request_id"
+        "event_id",
+        "request_id"
       ],
       "properties": {
-          "event_id": {
-              "type": "string",
-              "description": "The event ID associated with token."
-          },
-          "request_id": {
-              "type": "string",
-              "description": "The request ID associated with token."
-          },
-          "issuer": {
-            "type": "string",
-            "description": "Issuer URL. Optional. Overrides default if provided."
-          },
-          "validity_period": {
-            "type": "number",
-            "description": "Validity period in seconds. Optional. Overrides default if provided."
-          }
+        "event_id": {
+          "type": "string",
+          "description": "The event ID associated with token."
+        },
+        "request_id": {
+          "type": "string",
+          "description": "The request ID associated with token."
+        },
+        "issuer": {
+          "type": "string",
+          "description": "Issuer URL. Optional. Overrides default if provided."
+        },
+        "validity_period": {
+          "type": "number",
+          "description": "Validity period in seconds. Optional. Overrides default if provided."
+        }
       },
       "title": "TokenRequest",
       "description": "JSON schema for requesting a token be generated or deleted."
-  }
+    },
+    "HeartbeatModel": {
+      "type": "object",
+      "required": [
+        "event_id",
+        "request_id"
+      ],
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "description": "The event ID for this waiting room instance."
+        },
+        "request_id": {
+          "type": "string",
+          "description": "The API Gateway request ID assigned to this user when they joined the queue."
+        }
+      },
+      "title": "HeartbeatRequest",
+      "description": "JSON schema for a queue liveness heartbeat ping."
+    }
   },
   "x-amazon-apigateway-request-validators": {
     "Validate body": {

@@ -1,24 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Buy Ticket</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     :root {
-      --bg:       #f4f5f7;
-      --card:     #ffffff;
-      --primary:  #2563eb;
-      --primary-h:#1d4ed8;
-      --success:  #16a34a;
-      --danger:   #dc2626;
-      --warn:     #d97706;
-      --muted:    #6b7280;
-      --border:   #e5e7eb;
-      --text:     #111827;
-      --radius:   12px;
+      --bg: #f4f5f7;
+      --card: #ffffff;
+      --primary: #2563eb;
+      --primary-h: #1d4ed8;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warn: #d97706;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --text: #111827;
+      --radius: 12px;
     }
 
     body {
@@ -36,15 +43,20 @@
     .card {
       background: var(--card);
       border-radius: var(--radius);
-      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, .08);
       padding: 40px 36px;
       width: 100%;
       max-width: 480px;
     }
 
     /* ── State views ── */
-    .view { display: none; }
-    .view.active { display: block; }
+    .view {
+      display: none;
+    }
+
+    .view.active {
+      display: block;
+    }
 
     /* ── Loading state ── */
     .spinner-wrap {
@@ -52,27 +64,49 @@
       padding: 24px 0;
       color: var(--muted);
     }
+
     .spinner {
-      width: 36px; height: 36px;
+      width: 36px;
+      height: 36px;
       border: 3px solid var(--border);
       border-top-color: var(--primary);
       border-radius: 50%;
       animation: spin .7s linear infinite;
       margin: 0 auto 16px;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
 
     /* ── Token valid state ── */
     .check-icon {
-      width: 56px; height: 56px;
+      width: 56px;
+      height: 56px;
       background: #f0fdf4;
       border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       margin: 0 auto 20px;
       font-size: 1.6rem;
     }
-    h1 { font-size: 1.4rem; font-weight: 700; text-align: center; margin-bottom: 6px; }
-    .subtitle { color: var(--muted); text-align: center; font-size: .9rem; margin-bottom: 28px; }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      text-align: center;
+      font-size: .9rem;
+      margin-bottom: 28px;
+    }
 
     .token-info {
       background: var(--bg);
@@ -80,6 +114,7 @@
       padding: 16px;
       margin-bottom: 24px;
     }
+
     .token-row {
       display: flex;
       justify-content: space-between;
@@ -87,22 +122,50 @@
       padding: 6px 0;
       font-size: .88rem;
     }
-    .token-row + .token-row { border-top: 1px solid var(--border); }
-    .token-row .label { color: var(--muted); }
-    .token-row .value { font-weight: 600; }
+
+    .token-row+.token-row {
+      border-top: 1px solid var(--border);
+    }
+
+    .token-row .label {
+      color: var(--muted);
+    }
+
+    .token-row .value {
+      font-weight: 600;
+    }
+
     .tag {
       font-size: .75rem;
       font-weight: 600;
       padding: 2px 8px;
       border-radius: 999px;
     }
-    .tag.valid   { background: #dcfce7; color: var(--success); }
-    .tag.expired { background: #fef2f2; color: var(--danger); }
+
+    .tag.valid {
+      background: #dcfce7;
+      color: var(--success);
+    }
+
+    .tag.expired {
+      background: #fef2f2;
+      color: var(--danger);
+    }
 
     /* purchase form */
-    .form-group { margin-bottom: 16px; }
-    label { display: block; font-size: .85rem; font-weight: 500; margin-bottom: 6px; }
-    select, input[type=number] {
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: .85rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    select,
+    input[type=number] {
       width: 100%;
       padding: 10px 12px;
       border: 1px solid var(--border);
@@ -113,7 +176,11 @@
       outline: none;
       transition: border-color .15s;
     }
-    select:focus, input:focus { border-color: var(--primary); }
+
+    select:focus,
+    input:focus {
+      border-color: var(--primary);
+    }
 
     .btn {
       width: 100%;
@@ -125,10 +192,25 @@
       cursor: pointer;
       transition: background .15s, transform .1s;
     }
-    .btn:active { transform: scale(.98); }
-    .btn-primary { background: var(--primary); color: #fff; }
-    .btn-primary:hover:not(:disabled) { background: var(--primary-h); }
-    .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+    .btn:active {
+      transform: scale(.98);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-h);
+    }
+
+    .btn-primary:disabled {
+      background: var(--border);
+      color: var(--muted);
+      cursor: not-allowed;
+    }
 
     /* ── Success state ── */
     .receipt {
@@ -139,9 +221,23 @@
       margin-bottom: 20px;
       text-align: center;
     }
-    .receipt .emoji { font-size: 2.4rem; margin-bottom: 12px; }
-    .receipt h2 { font-size: 1.2rem; color: var(--success); margin-bottom: 6px; }
-    .receipt p  { color: var(--muted); font-size: .88rem; }
+
+    .receipt .emoji {
+      font-size: 2.4rem;
+      margin-bottom: 12px;
+    }
+
+    .receipt h2 {
+      font-size: 1.2rem;
+      color: var(--success);
+      margin-bottom: 6px;
+    }
+
+    .receipt p {
+      color: var(--muted);
+      font-size: .88rem;
+    }
+
     .receipt .ref {
       font-family: monospace;
       font-size: .95rem;
@@ -159,11 +255,13 @@
       margin-bottom: 20px;
       font-size: .9rem;
     }
+
     .alert-danger {
       background: #fef2f2;
       border: 1px solid #fecaca;
       color: var(--danger);
     }
+
     .alert-warn {
       background: #fffbeb;
       border: 1px solid #fde68a;
@@ -179,7 +277,10 @@
       margin-top: 16px;
       font-weight: 500;
     }
-    .link-btn:hover { text-decoration: underline; }
+
+    .link-btn:hover {
+      text-decoration: underline;
+    }
 
     footer {
       margin-top: 24px;
@@ -189,255 +290,239 @@
     }
   </style>
 </head>
+
 <body>
 
-<!-- ─── CONFIGURE THESE ──────────────────────────────────────────────────── -->
-<script>
-  const CONFIG = {
-    QUEUE_URL:      '../queue/index.html',       // back to the waiting room
-    EVENT_ID:       'ye-poland-2026-04',         // must match waiting room event
-    // In Phase 2, set this to your AppSync endpoint:
-    // APPSYNC_URL:  'https://xxxx.appsync-api.eu-west-1.amazonaws.com/graphql',
-  };
-</script>
-<!-- ─────────────────────────────────────────────────────────────────────── -->
+  <!-- ─── CONFIGURE THESE ──────────────────────────────────────────────────── -->
+  <script>
+    const CONFIG = {
+      QUEUE_URL: '../queue/index.html',       // back to the waiting room
+      EVENT_ID: 'ye-poland-2026-04',         // must match waiting room event
+      // In Phase 2, set this to your AppSync endpoint:
+      // APPSYNC_URL:  'https://xxxx.appsync-api.eu-west-1.amazonaws.com/graphql',
+    };
+  </script>
+  <!-- ─────────────────────────────────────────────────────────────────────── -->
 
-<div class="card">
+  <div class="card">
 
-  <!-- View: checking token -->
-  <div class="view active" id="viewLoading">
-    <div class="spinner-wrap">
-      <div class="spinner"></div>
-      <p>Verifying your queue token…</p>
-    </div>
-  </div>
-
-  <!-- View: token valid — show buy form -->
-  <div class="view" id="viewValid">
-    <div class="check-icon">✅</div>
-    <h1>You're in!</h1>
-    <p class="subtitle">Your place in the queue has been confirmed.</p>
-
-    <div class="token-info">
-      <div class="token-row">
-        <span class="label">Token status</span>
-        <span class="value"><span class="tag valid">Valid</span></span>
-      </div>
-      <div class="token-row">
-        <span class="label">Expires</span>
-        <span class="value" id="tokenExpiry">—</span>
-      </div>
-      <div class="token-row">
-        <span class="label">Queue position</span>
-        <span class="value" id="tokenPosition">—</span>
+    <!-- View: checking token -->
+    <div class="view active" id="viewLoading">
+      <div class="spinner-wrap">
+        <div class="spinner"></div>
+        <p>Verifying your queue token…</p>
       </div>
     </div>
 
-    <div class="form-group">
-      <label for="ticketType">Ticket type</label>
-      <select id="ticketType">
-        <option value="general">General Admission — €49</option>
-        <option value="standing">Standing Floor — €75</option>
-        <option value="vip">VIP — €149</option>
-      </select>
+    <!-- View: token valid — show buy form -->
+    <div class="view" id="viewValid">
+      <div class="check-icon">✅</div>
+      <h1>You're in!</h1>
+      <p class="subtitle">Your place in the queue has been confirmed.</p>
+
+      <div class="token-info">
+        <div class="token-row">
+          <span class="label">Token status</span>
+          <span class="value"><span class="tag valid">Valid</span></span>
+        </div>
+        <div class="token-row">
+          <span class="label">Expires</span>
+          <span class="value" id="tokenExpiry">—</span>
+        </div>
+        <div class="token-row">
+          <span class="label">Queue position</span>
+          <span class="value" id="tokenPosition">—</span>
+        </div>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label for="ticketQty">Quantity</label>
-      <input type="number" id="ticketQty" value="1" min="1" max="4" />
+    <!-- View: purchase success -->
+    <!-- <div class="view" id="viewSuccess">
+      <div class="receipt">
+        <div class="emoji">🎉</div>
+        <h2>Purchase confirmed!</h2>
+        <p>Your ticket is on its way. Check your email for confirmation.</p>
+        <div class="ref" id="receiptRef">REF-000000</div>
+      </div>
+      <p style="color:var(--muted);font-size:.85rem;text-align:center">
+        You can safely close this tab.
+      </p>
+    </div> -->
+
+    <!-- View: no token / expired token -->
+    <div class="view" id="viewNoToken">
+      <div class="alert alert-danger" id="noTokenMsg">
+        No valid queue token found.
+      </div>
+      <p style="color:var(--muted);font-size:.88rem;margin-bottom:16px">
+        You need to pass through the waiting room before purchasing a ticket.
+      </p>
+      <a class="link-btn" id="backToQueueLink" href="#">← Join the waiting room</a>
     </div>
 
-    <button class="btn btn-primary" id="buyBtn" onclick="completePurchase()">
-      Buy ticket
-    </button>
+    <!-- View: expired token -->
+    <div class="view" id="viewExpired">
+      <div class="alert alert-warn">
+        Your queue token has expired. Tokens are valid for a limited time only.
+      </div>
+      <p style="color:var(--muted);font-size:.88rem;margin-bottom:16px">
+        You will need to re-enter the waiting room to get a fresh token.
+      </p>
+      <a class="link-btn" id="backToQueueLink2" href="#">← Rejoin the waiting room</a>
+    </div>
+
   </div>
 
-  <!-- View: purchase success -->
-  <div class="view" id="viewSuccess">
-    <div class="receipt">
-      <div class="emoji">🎉</div>
-      <h2>Purchase confirmed!</h2>
-      <p>Your ticket is on its way. Check your email for confirmation.</p>
-      <div class="ref" id="receiptRef">REF-000000</div>
-    </div>
-    <p style="color:var(--muted);font-size:.85rem;text-align:center">
-      You can safely close this tab.
-    </p>
-  </div>
+  <footer>Powered by Tixy Fair Queue</footer>
 
-  <!-- View: no token / expired token -->
-  <div class="view" id="viewNoToken">
-    <div class="alert alert-danger" id="noTokenMsg">
-      No valid queue token found.
-    </div>
-    <p style="color:var(--muted);font-size:.88rem;margin-bottom:16px">
-      You need to pass through the waiting room before purchasing a ticket.
-    </p>
-    <a class="link-btn" id="backToQueueLink" href="#">← Join the waiting room</a>
-  </div>
-
-  <!-- View: expired token -->
-  <div class="view" id="viewExpired">
-    <div class="alert alert-warn">
-      Your queue token has expired. Tokens are valid for a limited time only.
-    </div>
-    <p style="color:var(--muted);font-size:.88rem;margin-bottom:16px">
-      You will need to re-enter the waiting room to get a fresh token.
-    </p>
-    <a class="link-btn" id="backToQueueLink2" href="#">← Rejoin the waiting room</a>
-  </div>
-
-</div>
-
-<footer>Powered by Virtual Waiting Room on AWS</footer>
-
-<script>
-  // ─── Token parsing ────────────────────────────────────────────────────────
-  // Decodes the JWT payload (base64url). This is NOT cryptographic verification —
-  // it's a client-side UX check only. Real enforcement happens in Phase 2 via
-  // the AppSync Lambda Authorizer.
-  function parseJwtPayload(token) {
-    try {
-      const parts = token.split('.');
-      if (parts.length !== 3) return null;
-      let b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-      const pad = b64.length % 4;
-      if (pad) b64 += '='.repeat(4 - pad);
-      return JSON.parse(atob(b64));
-    } catch (_) {
-      return null;
-    }
-  }
-
-  // ─── View switching ───────────────────────────────────────────────────────
-  function showView(id) {
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-  }
-
-  // ─── Boot ─────────────────────────────────────────────────────────────────
-  (function init() {
-    // Build queue URL with ?redirect pointing back here
-    const queueUrl = `${CONFIG.QUEUE_URL}`;
-    document.getElementById('backToQueueLink').href  = queueUrl;
-    document.getElementById('backToQueueLink2').href = queueUrl;
-
-    // 1. Try URL param first (dev cross-domain flow)
-    const params   = new URLSearchParams(window.location.search);
-    let rawToken   = params.get('wvroom_token');
-
-    // 2. Fall back to sessionStorage (set by queue page on same origin)
-    if (!rawToken) rawToken = sessionStorage.getItem('wvroom_token');
-
-    // 3. Fall back to cookie (prod same-domain flow)
-    if (!rawToken) {
-      const match = document.cookie.match(/(?:^|;\s*)wvroom_token=([^;]+)/);
-      if (match) rawToken = decodeURIComponent(match[1]);
+  <script>
+    // ─── Token parsing ────────────────────────────────────────────────────────
+    // Decodes the JWT payload (base64url). This is NOT cryptographic verification —
+    // it's a client-side UX check only. Real enforcement happens in Phase 2 via
+    // the AppSync Lambda Authorizer.
+    function parseJwtPayload(token) {
+      try {
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        let b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const pad = b64.length % 4;
+        if (pad) b64 += '='.repeat(4 - pad);
+        return JSON.parse(atob(b64));
+      } catch (_) {
+        return null;
+      }
     }
 
-    if (!rawToken) {
-      showView('viewNoToken');
-      return;
+    // ─── View switching ───────────────────────────────────────────────────────
+    function showView(id) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
     }
 
-    // Keep token available for the purchase call
-    window._wvroomToken = rawToken;
+    // ─── Boot ─────────────────────────────────────────────────────────────────
+    (function init() {
+      // Build queue URL with ?redirect pointing back here
+      const queueUrl = `${CONFIG.QUEUE_URL}`;
+      document.getElementById('backToQueueLink').href = queueUrl;
+      document.getElementById('backToQueueLink2').href = queueUrl;
 
-    const claims = parseJwtPayload(rawToken);
+      // 1. Try URL param first (dev cross-domain flow)
+      const params = new URLSearchParams(window.location.search);
+      let rawToken = params.get('wvroom_token');
 
-    if (!claims) {
-      document.getElementById('noTokenMsg').textContent = 'Token could not be parsed.';
-      showView('viewNoToken');
-      return;
+      // 2. Fall back to sessionStorage (set by queue page on same origin)
+      if (!rawToken) rawToken = sessionStorage.getItem('wvroom_token');
+
+      // 3. Fall back to cookie (prod same-domain flow)
+      if (!rawToken) {
+        const match = document.cookie.match(/(?:^|;\s*)wvroom_token=([^;]+)/);
+        if (match) rawToken = decodeURIComponent(match[1]);
+      }
+
+      if (!rawToken) {
+        showView('viewNoToken');
+        return;
+      }
+
+      // Keep token available for the purchase call
+      window._wvroomToken = rawToken;
+
+      const claims = parseJwtPayload(rawToken);
+
+      if (!claims) {
+        document.getElementById('noTokenMsg').textContent = 'Token could not be parsed.';
+        showView('viewNoToken');
+        return;
+      }
+
+      // Check expiry
+      const now = Math.floor(Date.now() / 1000);
+      if (claims.exp && now > claims.exp) {
+        showView('viewExpired');
+        return;
+      }
+
+      // Check event
+      if (claims.aud && claims.aud !== CONFIG.EVENT_ID) {
+        document.getElementById('noTokenMsg').textContent =
+          'Token was issued for a different event.';
+        showView('viewNoToken');
+        return;
+      }
+
+      // Valid — populate token info panel
+      if (claims.exp) {
+        document.getElementById('tokenExpiry').textContent =
+          new Date(claims.exp * 1000).toLocaleTimeString();
+      }
+      if (claims.sub) {
+        document.getElementById('tokenPosition').textContent = claims.sub;
+      }
+
+      // Clean up URL so the token isn't sitting in browser history
+      if (params.has('wvroom_token')) {
+        const clean = window.location.pathname + window.location.hash;
+        window.history.replaceState(null, '', clean);
+      }
+
+      // Store for this session
+      sessionStorage.setItem('wvroom_token', rawToken);
+
+      showView('viewValid');
+    })();
+
+    // ─── Purchase (Phase 1 — mock / Phase 2 — real AppSync call) ─────────────
+    async function completePurchase() {
+      const btn = document.getElementById('buyBtn');
+      const ticketType = document.getElementById('ticketType').value;
+      const qty = parseInt(document.getElementById('ticketQty').value, 10);
+      const token = window._wvroomToken;
+
+      btn.disabled = true;
+      btn.textContent = 'Processing…';
+
+      try {
+        /* ─ Phase 2: replace the mock below with your real AppSync call ──────
+         *
+         * import { generateClient } from 'aws-amplify/api';
+         * const client = generateClient();
+         * const result = await client.graphql({
+         *   query: buyTicketMutation,
+         *   variables: { ticketType, qty },
+         *   authMode: 'lambda',
+         *   authToken: token,
+         * });
+         *
+         * ──────────────────────────────────────────────────────────────────── */
+
+        // Phase 1 mock — simulates a 1.5 s network call
+        await new Promise(r => setTimeout(r, 1500));
+
+        // Generate a fake reference number for the demo
+        const ref = 'REF-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+        document.getElementById('receiptRef').textContent = ref;
+
+        // Clear the token so it can't be reused in this session
+        sessionStorage.removeItem('wvroom_token');
+        document.cookie = 'wvroom_token=; path=/; max-age=0';
+
+        showView('viewSuccess');
+
+      } catch (err) {
+        console.error(err);
+        btn.disabled = false;
+        btn.textContent = 'Buy ticket';
+
+        const errDiv = document.createElement('div');
+        errDiv.className = 'alert alert-danger';
+        errDiv.style.marginTop = '16px';
+        errDiv.textContent = 'Purchase failed. Please try again.';
+        btn.after(errDiv);
+        setTimeout(() => errDiv.remove(), 5000);
+      }
     }
-
-    // Check expiry
-    const now = Math.floor(Date.now() / 1000);
-    if (claims.exp && now > claims.exp) {
-      showView('viewExpired');
-      return;
-    }
-
-    // Check event
-    if (claims.aud && claims.aud !== CONFIG.EVENT_ID) {
-      document.getElementById('noTokenMsg').textContent =
-        'Token was issued for a different event.';
-      showView('viewNoToken');
-      return;
-    }
-
-    // Valid — populate token info panel
-    if (claims.exp) {
-      document.getElementById('tokenExpiry').textContent =
-        new Date(claims.exp * 1000).toLocaleTimeString();
-    }
-    if (claims.sub) {
-      document.getElementById('tokenPosition').textContent = claims.sub;
-    }
-
-    // Clean up URL so the token isn't sitting in browser history
-    if (params.has('wvroom_token')) {
-      const clean = window.location.pathname + window.location.hash;
-      window.history.replaceState(null, '', clean);
-    }
-
-    // Store for this session
-    sessionStorage.setItem('wvroom_token', rawToken);
-
-    showView('viewValid');
-  })();
-
-  // ─── Purchase (Phase 1 — mock / Phase 2 — real AppSync call) ─────────────
-  async function completePurchase() {
-    const btn        = document.getElementById('buyBtn');
-    const ticketType = document.getElementById('ticketType').value;
-    const qty        = parseInt(document.getElementById('ticketQty').value, 10);
-    const token      = window._wvroomToken;
-
-    btn.disabled    = true;
-    btn.textContent = 'Processing…';
-
-    try {
-      /* ─ Phase 2: replace the mock below with your real AppSync call ──────
-       *
-       * import { generateClient } from 'aws-amplify/api';
-       * const client = generateClient();
-       * const result = await client.graphql({
-       *   query: buyTicketMutation,
-       *   variables: { ticketType, qty },
-       *   authMode: 'lambda',
-       *   authToken: token,
-       * });
-       *
-       * ──────────────────────────────────────────────────────────────────── */
-
-      // Phase 1 mock — simulates a 1.5 s network call
-      await new Promise(r => setTimeout(r, 1500));
-
-      // Generate a fake reference number for the demo
-      const ref = 'REF-' + Math.random().toString(36).slice(2, 8).toUpperCase();
-      document.getElementById('receiptRef').textContent = ref;
-
-      // Clear the token so it can't be reused in this session
-      sessionStorage.removeItem('wvroom_token');
-      document.cookie = 'wvroom_token=; path=/; max-age=0';
-
-      showView('viewSuccess');
-
-    } catch (err) {
-      console.error(err);
-      btn.disabled    = false;
-      btn.textContent = 'Buy ticket';
-
-      const errDiv = document.createElement('div');
-      errDiv.className = 'alert alert-danger';
-      errDiv.style.marginTop = '16px';
-      errDiv.textContent = 'Purchase failed. Please try again.';
-      btn.after(errDiv);
-      setTimeout(() => errDiv.remove(), 5000);
-    }
-  }
-</script>
+  </script>
 
 </body>
+
 </html>
